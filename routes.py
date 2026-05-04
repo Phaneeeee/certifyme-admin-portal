@@ -200,3 +200,13 @@ def create_opportunity():
     db.session.commit()
 
     return jsonify({"status": "success", "data": opportunity.to_dict()}), 201
+
+
+@api.route("/opportunities/<int:opportunity_id>", methods=["GET"])
+@login_required
+def get_opportunity(opportunity_id):
+    opportunity = Opportunity.query.filter_by(
+        id=opportunity_id,
+        admin_id=current_user.id,
+    ).first_or_404()
+    return jsonify({"status": "success", "data": opportunity.to_dict()}), 200

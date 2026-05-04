@@ -369,9 +369,33 @@ function renderOpportunityCard(opportunity) {
             </div>
         </div>
         <p class="opportunity-description">${escapeHtml(description)}</p>
+        <div class="opportunity-footer">
+            <span class="applicants-count">${escapeHtml(opportunity.max_applicants ?? 0)} applicants</span>
+            <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="view">View Details</button>
+        </div>
     `;
 
+    card.querySelector('[data-action="view"]').addEventListener('click', () => viewOpportunityDetails(opportunity.id));
+
     return card;
+}
+
+async function viewOpportunityDetails(id) {
+    try {
+        const result = await apiRequest(`/api/opportunities/${id}`);
+        const opportunity = result.data;
+        openOpportunityDetails(opportunity.name, {
+            duration: opportunity.duration,
+            startDate: opportunity.start_date,
+            description: opportunity.description,
+            skills: opportunity.skills,
+            applicants: opportunity.max_applicants ?? 0,
+            futureOpportunities: opportunity.future_opportunities,
+            prerequisites: `Category: ${opportunity.category}`
+        });
+    } catch (err) {
+        showToast(err.message);
+    }
 }
 
 async function loadOpportunities() {
