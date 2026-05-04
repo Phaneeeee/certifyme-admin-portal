@@ -399,14 +399,28 @@ function renderOpportunityCard(opportunity) {
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="view">View Details</button>
                 <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="edit">Edit</button>
+                <button class="modal-action-btn reject" style="width: auto; padding: 8px 16px;" data-action="delete">Delete</button>
             </div>
         </div>
     `;
 
     card.querySelector('[data-action="view"]').addEventListener('click', () => viewOpportunityDetails(opportunity.id));
     card.querySelector('[data-action="edit"]').addEventListener('click', () => openOpportunityModal(opportunity));
+    card.querySelector('[data-action="delete"]').addEventListener('click', () => deleteOpportunity(opportunity.id));
 
     return card;
+}
+
+async function deleteOpportunity(id) {
+    if (!confirm('Delete this opportunity permanently?')) return;
+
+    try {
+        await apiRequest(`/api/opportunities/${id}`, { method: 'DELETE' });
+        showToast('Opportunity deleted successfully!');
+        loadOpportunities();
+    } catch (err) {
+        showToast(err.message);
+    }
 }
 
 async function viewOpportunityDetails(id) {

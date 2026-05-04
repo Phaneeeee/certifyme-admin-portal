@@ -228,3 +228,15 @@ def update_opportunity(opportunity_id):
     db.session.commit()
 
     return jsonify({"status": "success", "data": opportunity.to_dict()}), 200
+
+
+@api.route("/opportunities/<int:opportunity_id>", methods=["DELETE"])
+@login_required
+def delete_opportunity(opportunity_id):
+    opportunity = Opportunity.query.filter_by(
+        id=opportunity_id,
+        admin_id=current_user.id,
+    ).first_or_404()
+    db.session.delete(opportunity)
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Opportunity deleted"}), 200
