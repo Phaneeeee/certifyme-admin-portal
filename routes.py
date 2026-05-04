@@ -3,10 +3,10 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import Admin, db
+from models import Admin, Opportunity, db
 
 
 api = Blueprint("api", __name__, url_prefix="/api")
@@ -122,3 +122,19 @@ def reset_password(token):
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Password updated successfully"}), 200
+
+
+@api.route("/opportunities", methods=["GET"])
+@login_required
+def list_opportunities():
+    opportunities = (
+        Opportunity.query.filter_by(admin_id=current_user.id)
+        .order_by(Opportunity.created_at.desc())
+        .all()
+    )
+    return jsonify(
+        {
+            "status": "success",
+            "data": [opportunity.to_dict() for opportunity in opportunities],
+        }
+    ), 200

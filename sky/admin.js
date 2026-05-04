@@ -96,6 +96,8 @@ function showDashboard(admin) {
     if (window.innerWidth <= 768) {
         document.getElementById('menuToggle').style.display = 'flex';
     }
+
+    loadOpportunities();
 }
 
 async function handleLogout() {
@@ -137,6 +139,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         } else if (page === 'opportunity') {
             document.getElementById('opportunitySection').classList.add('active');
             document.getElementById('pageTitle').textContent = 'Opportunity Management';
+            loadOpportunities();
         } else if (page === 'reports') {
             document.getElementById('reportsSection').classList.add('active');
             document.getElementById('pageTitle').textContent = 'Reports and Analytics';
@@ -348,6 +351,45 @@ document.getElementById('opportunityModal').addEventListener('click', function(e
     }
 });
 
+function renderOpportunityCard(opportunity) {
+    const card = document.createElement('div');
+    card.className = 'opportunity-card';
+    const description = opportunity.description.length > 140
+        ? opportunity.description.substring(0, 137) + '...'
+        : opportunity.description;
+
+    card.innerHTML = `
+        <div class="opportunity-card-header">
+            <h5>${escapeHtml(opportunity.name)}</h5>
+            <div class="opportunity-meta">
+                <span>${escapeHtml(opportunity.category)}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${escapeHtml(opportunity.duration)}</span>
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(opportunity.start_date)}</span>
+            </div>
+        </div>
+        <p class="opportunity-description">${escapeHtml(description)}</p>
+    `;
+
+    return card;
+}
+
+async function loadOpportunities() {
+    const grid = document.querySelector('.opportunities-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    try {
+        const result = await apiRequest('/api/opportunities');
+        if (!result.data.length) {
+            grid.innerHTML = '<p style="color: var(--qf-text-light); font-size: 14px;">No opportunities have been created yet.</p>';
+            return;
+        }
+        result.data.forEach(opportunity => grid.appendChild(renderOpportunityCard(opportunity)));
+    } catch (err) {
+        grid.innerHTML = '<p style="color: var(--qf-text-light); font-size: 14px;">Unable to load opportunities.</p>';
+    }
+}
+
 // Handle opportunity form submission
         document.getElementById('opportunityForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -417,11 +459,7 @@ document.getElementById('opportunityModal').addEventListener('click', function(e
                 });
             });
 
-            // append to grid
-            const grid = document.querySelector('.opportunities-grid');
-            if (grid) grid.appendChild(card);
-
-            showToast('Opportunity created successfully!');
+            showToast('Opportunity creation will be connected in the next task.');
             closeOpportunityModal();
             this.reset();
         });
