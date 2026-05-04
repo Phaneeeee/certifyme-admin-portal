@@ -106,6 +106,7 @@ async function handleLogout() {
     } catch (err) {
         // If the server session already expired, still return the UI to login.
     }
+    clearOpportunityGrid();
     document.getElementById('dashboardWrapper').classList.remove('active');
     document.getElementById('authWrapper').style.display = 'flex';
     document.body.style.alignItems = '';
@@ -388,6 +389,11 @@ async function loadOpportunities() {
     } catch (err) {
         grid.innerHTML = '<p style="color: var(--qf-text-light); font-size: 14px;">Unable to load opportunities.</p>';
     }
+}
+
+function clearOpportunityGrid() {
+    const grid = document.querySelector('.opportunities-grid');
+    if (grid) grid.innerHTML = '';
 }
 
 function opportunityPayloadFromForm() {
