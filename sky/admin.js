@@ -82,14 +82,13 @@ function checkStrength(val) {
 }
 
 // ===== SHOW DASHBOARD =====
-function showDashboard(email) {
+function showDashboard(admin) {
     document.getElementById('authWrapper').style.display = 'none';
     document.getElementById('dashboardWrapper').classList.add('active');
     document.body.style.alignItems = 'stretch';
 
     // Personalize
-    const name = email.split('@')[0];
-    const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+    const displayName = admin.full_name || admin.email.split('@')[0];
     document.getElementById('dashName').textContent = displayName;
     document.getElementById('dashAvatar').textContent = displayName.substring(0, 2).toUpperCase();
 
@@ -99,7 +98,12 @@ function showDashboard(email) {
     }
 }
 
-function handleLogout() {
+async function handleLogout() {
+    try {
+        await apiRequest('/api/logout', { method: 'POST' });
+    } catch (err) {
+        // If the server session already expired, still return the UI to login.
+    }
     document.getElementById('dashboardWrapper').classList.remove('active');
     document.getElementById('authWrapper').style.display = 'flex';
     document.body.style.alignItems = '';
@@ -648,13 +652,14 @@ function filterVerifiers() {
 }
 
 // ===== LOGIN =====
-document.getElementById('loginForm').addEventListener('submit', function(e) {
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     clearAllErrors('loginForm');
     let valid = true;
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     const captchaInput = document.getElementById('loginCaptchaInput').value.trim();
+    const remember = document.querySelector('#loginForm input[type="checkbox"]').checked;
 
     if (!email || !isValidEmail(email)) { showError('loginEmailErr'); document.getElementById('loginEmail').classList.add('error'); valid = false; }
     if (!password) { showError('loginPasswordErr','Please enter your password'); document.getElementById('loginPassword').classList.add('error'); valid = false; }
@@ -663,9 +668,20 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 
     if (!valid) { shakeForm('loginForm'); return; }
 
-    showToast('Login successful! Redirecting...');
-    setTimeout(() => showDashboard(email), 1200);
-    generateCaptcha('login');
+    try {
+        const result = await apiRequest('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password, remember })
+        });
+        showToast('Login successful! Redirecting...');
+        setTimeout(() => showDashboard(result.admin), 1200);
+        generateCaptcha('login');
+        this.reset();
+    } catch (err) {
+        showError('loginPasswordErr', err.message);
+        document.getElementById('loginPassword').classList.add('error');
+        shakeForm('loginForm');
+    }
 });
 
 // ===== SIGNUP =====
@@ -741,3 +757,7 @@ window.addEventListener('resize', () => {
     const toggle = document.getElementById('menuToggle');
     if (toggle) toggle.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 });
+
+apiRequest('/api/me')
+    .then(result => showDashboard(result.admin))
+    .catch(() => {});
