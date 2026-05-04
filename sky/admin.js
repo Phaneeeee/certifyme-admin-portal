@@ -337,12 +337,37 @@ document.getElementById('collaboratorCoursesModal').addEventListener('click', fu
 });
 
 // ===== OPPORTUNITY MODAL =====
-function openOpportunityModal() {
+let editingOpportunityId = null;
+
+function openOpportunityModal(opportunity = null) {
+    editingOpportunityId = opportunity ? opportunity.id : null;
+    const form = document.getElementById('opportunityForm');
+    form.reset();
+
+    const title = document.querySelector('#opportunityModal .modal-header h3');
+    const submitButton = document.querySelector('#opportunityForm .btn-primary');
+    title.textContent = opportunity ? 'Edit Opportunity' : 'Add New Opportunity';
+    submitButton.textContent = opportunity ? 'Update Opportunity' : 'Create Opportunity';
+
+    if (opportunity) {
+        document.getElementById('oppName').value = opportunity.name;
+        document.getElementById('oppDuration').value = opportunity.duration;
+        document.getElementById('oppStartDate').value = opportunity.start_date;
+        document.getElementById('oppDescription').value = opportunity.description;
+        document.getElementById('oppSkills').value = opportunity.skills.join(', ');
+        document.getElementById('oppCategory').value = opportunity.category;
+        document.getElementById('oppFuture').value = opportunity.future_opportunities;
+        document.getElementById('oppMaxApplicants').value = opportunity.max_applicants ?? '';
+    }
+
     document.getElementById('opportunityModal').classList.add('active');
 }
 
 function closeOpportunityModal() {
     document.getElementById('opportunityModal').classList.remove('active');
+    editingOpportunityId = null;
+    document.querySelector('#opportunityModal .modal-header h3').textContent = 'Add New Opportunity';
+    document.querySelector('#opportunityForm .btn-primary').textContent = 'Create Opportunity';
 }
 
 // Close modal when clicking outside
@@ -371,11 +396,15 @@ function renderOpportunityCard(opportunity) {
         <p class="opportunity-description">${escapeHtml(description)}</p>
         <div class="opportunity-footer">
             <span class="applicants-count">${escapeHtml(opportunity.max_applicants ?? 0)} applicants</span>
-            <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="view">View Details</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="view">View Details</button>
+                <button class="view-course-btn" style="width: auto; padding: 8px 16px;" data-action="edit">Edit</button>
+            </div>
         </div>
     `;
 
     card.querySelector('[data-action="view"]').addEventListener('click', () => viewOpportunityDetails(opportunity.id));
+    card.querySelector('[data-action="edit"]').addEventListener('click', () => openOpportunityModal(opportunity));
 
     return card;
 }
@@ -445,11 +474,14 @@ document.getElementById('opportunityForm').addEventListener('submit', async func
     }
 
     try {
-        await apiRequest('/api/opportunities', {
-            method: 'POST',
+        const url = editingOpportunityId ? `/api/opportunities/${editingOpportunityId}` : '/api/opportunities';
+        const method = editingOpportunityId ? 'PUT' : 'POST';
+
+        await apiRequest(url, {
+            method,
             body: JSON.stringify(payload)
         });
-        showToast('Opportunity created successfully!');
+        showToast(editingOpportunityId ? 'Opportunity updated successfully!' : 'Opportunity created successfully!');
         closeOpportunityModal();
         this.reset();
         loadOpportunities();

@@ -210,3 +210,21 @@ def get_opportunity(opportunity_id):
         admin_id=current_user.id,
     ).first_or_404()
     return jsonify({"status": "success", "data": opportunity.to_dict()}), 200
+
+
+@api.route("/opportunities/<int:opportunity_id>", methods=["PUT", "POST"])
+@login_required
+def update_opportunity(opportunity_id):
+    opportunity = Opportunity.query.filter_by(
+        id=opportunity_id,
+        admin_id=current_user.id,
+    ).first_or_404()
+    payload, validation_error = opportunity_payload()
+    if validation_error:
+        return error(validation_error)
+
+    for field, value in payload.items():
+        setattr(opportunity, field, value)
+    db.session.commit()
+
+    return jsonify({"status": "success", "data": opportunity.to_dict()}), 200
