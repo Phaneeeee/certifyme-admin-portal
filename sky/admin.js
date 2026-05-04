@@ -726,7 +726,7 @@ document.getElementById('signupForm').addEventListener('submit', async function(
 });
 
 // ===== FORGOT =====
-document.getElementById('forgotForm').addEventListener('submit', function(e) {
+document.getElementById('forgotForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     clearAllErrors('forgotForm');
     let valid = true;
@@ -738,9 +738,18 @@ document.getElementById('forgotForm').addEventListener('submit', function(e) {
     else if (captchaInput !== captchas.forgot) { showError('forgotCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('forgot'); }
 
     if (!valid) { shakeForm('forgotForm'); return; }
-    showToast('Reset link sent to your email!');
-    generateCaptcha('forgot');
-    this.reset();
+
+    try {
+        await apiRequest('/api/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+        showToast('If that email exists, a reset link has been generated.');
+        generateCaptcha('forgot');
+        this.reset();
+    } catch (err) {
+        showToast(err.message);
+    }
 });
 
 // Clear errors on input
