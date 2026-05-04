@@ -11,6 +11,7 @@ from models import Admin, Opportunity, db
 
 api = Blueprint("api", __name__, url_prefix="/api")
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+ALLOWED_CATEGORIES = {"technology", "business", "design", "marketing", "data", "other"}
 
 
 def request_data():
@@ -138,3 +139,64 @@ def list_opportunities():
             "data": [opportunity.to_dict() for opportunity in opportunities],
         }
     ), 200
+
+
+def opportunity_payload():
+    data = request_data()
+    skills = data.get("skills") or ""
+    if isinstance(skills, list):
+        skills = ", ".join(str(skill).strip() for skill in skills if str(skill).strip())
+
+    max_applicants = data.get("max_applicants", data.get("maxApplicants"))
+    if max_applicants in ("", None):
+        max_applicants = None
+    else:
+        try:
+            max_applicants = int(max_applicants)
+        except (TypeError, ValueError):
+            return None, "Maximum applicants must be a number"
+        if max_applicants < 0:
+            return None, "Maximum applicants cannot be negative"
+
+    payload = {
+        "name": (data.get("name") or "").strip(),
+        "duration": (data.get("duration") or "").strip(),
+        "start_date": (data.get("start_date") or data.get("startDate") or "").strip(),
+        "description": (data.get("description") or "").strip(),
+        "skills": skills.strip(),
+        "category": (data.get("category") or "").strip().lower(),
+        "future_opportunities": (
+            data.get("future_opportunities") or data.get("futureOpportunities") or ""
+        ).strip(),
+        "max_applicants": max_applicants,
+    }
+
+    required_fields = [
+        "name",
+        "duration",
+        "start_date",
+        "description",
+        "skills",
+        "category",
+        "future_opportunities",
+    ]
+    if any(not payload[field] for field in required_fields):
+        return None, "Please fill all required fields"
+    if payload["category"] not in ALLOWED_CATEGORIES:
+        return None, "Invalid category"
+
+    return payload, None
+
+
+@api.route("/opportunities", methods=["POST"])
+@login_required
+def create_opportunity():
+    payload, validation_error = opportunity_payload()
+    if validation_error:
+        return error(validation_error)
+
+    opportunity = Opportunity(**payload, admin_id=current_user.id)
+    db.session.add(opportunity)
+    db.session.commit()
+
+    return jsonify({"status": "success", "data": opportunity.to_dict()}), 201
