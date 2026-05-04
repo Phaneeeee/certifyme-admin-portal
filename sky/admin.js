@@ -49,6 +49,22 @@ function showToast(msg) {
     setTimeout(() => document.getElementById('toast').classList.remove('show'), 3000);
 }
 
+async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        },
+        ...options
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || data.message || 'Something went wrong');
+    }
+    return data;
+}
+
 function checkStrength(val) {
     let score = 0;
     if (val.length >= 8) score++;
@@ -653,7 +669,7 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 });
 
 // ===== SIGNUP =====
-document.getElementById('signupForm').addEventListener('submit', function(e) {
+document.getElementById('signupForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     clearAllErrors('signupForm');
     let valid = true;
@@ -671,10 +687,26 @@ document.getElementById('signupForm').addEventListener('submit', function(e) {
     else if (captchaInput !== captchas.signup) { showError('signupCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('signup'); }
 
     if (!valid) { shakeForm('signupForm'); return; }
-    showToast('Account created successfully!');
-    generateCaptcha('signup');
-    this.reset(); checkStrength('');
-    setTimeout(() => showPage('loginPage'), 1500);
+
+    try {
+        await apiRequest('/api/signup', {
+            method: 'POST',
+            body: JSON.stringify({
+                full_name: name,
+                email,
+                password,
+                confirm_password: confirmPassword
+            })
+        });
+        showToast('Account created successfully!');
+        generateCaptcha('signup');
+        this.reset(); checkStrength('');
+        setTimeout(() => showPage('loginPage'), 1500);
+    } catch (err) {
+        showError('signupEmailErr', err.message);
+        document.getElementById('signupEmail').classList.add('error');
+        shakeForm('signupForm');
+    }
 });
 
 // ===== FORGOT =====
